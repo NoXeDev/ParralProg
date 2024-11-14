@@ -1,6 +1,13 @@
 # Rapport TP/TD Programmation parallèle / avancée
 
 ## TP 1 : Simulation du mouvement d'un ou plusieurs mobiles
+
+### Introduction 
+
+
+En Java, un thread est une unité d'exécution qui permet d'effectuer plusieurs tâches simultanément dans un programme. L'interface `Runnable` est une manière d'implémenter des threads sans hériter de la classe `Thread`. En implémentant `Runnable`, on définit la méthode `run()` qui contient le code que le thread doit exécuter. Ensuite, un objet `Thread` utilise cette instance de `Runnable` pour lancer l'exécution concurrente avec la méthode `start()`. Utiliser `Runnable` est souvent préféré car cela permet de séparer la logique métier de l'implémentation du thread, offrant ainsi plus de flexibilité.
+
+
 ### Exercice 1
 
 Dans l'excercice 1, il est demandé de créer une simple fenêtre avec un petit carré (UnMobile) se déplacant de gauche a droite. <br>
@@ -180,3 +187,6 @@ La gestion des threads ne change pas.
 Voici le schema ULM final du TP1
 
 ![ulm](res/tp1ulmschema.png)
+
+## TP 2 : Affichage - Exclusion et Semaphore
+
