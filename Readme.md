@@ -204,3 +204,100 @@ Grâce à ce mécanisme, les threads s’empêchent mutuellement d’exécuter l
 Voici le schéma UML final du TP2 :
 
 ![uml](res/tp2ulmschema.png)
+
+## TP 3 : Boîte aux lettres et boulangerie  
+
+Le TP 3 introduit le concept de **Blocking Queue** avec, dans un premier temps, l'implémentation simple d'une boîte aux lettres.  
+Un producteur dépose une lettre, et un consommateur en retire une.  
+Cependant, il y a plusieurs conditions :  
+
+- Le producteur ne dépose sa "lettre" dans la boîte aux lettres (BAL) que si elle est vide.  
+- Le consommateur ne retire une "lettre" de la BAL que si elle en contient une.  
+
+On peut déjà voir, à travers cet énoncé, que le producteur et le consommateur sont deux threads distincts, et que la boîte aux lettres constitue ici une section critique.  
+
+La boîte aux lettres fera office de file d'attente bloquante pour les threads, afin de respecter les différentes conditions.  
+
+```java
+public synchronized void send(String letter) {
+        try {
+            while(currentLetter != null) {
+                wait();   // Ici, si la boîte aux lettres contient déjà une lettre, le producteur sera obligé de s'arrêter à son prochain envoi.
+            }
+
+            System.out.println("LetterBox send: " + letter);
+            currentLetter = letter;
+            notify();     // Ici, on débloque le thread du consommateur s'il est bloqué à l'instruction wait().
+        }
+        catch(InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public synchronized String receive() {
+        try {
+            while (currentLetter == null) {
+                wait(); // Ici, si la boîte aux lettres est vide, le consommateur sera obligé de s'arrêter à son prochain essai de retrait.
+            }
+            String letter = currentLetter; // copie
+
+            currentLetter = null;
+            notify();       // Ici, on débloque le thread du producteur s'il est bloqué à l'instruction wait().
+
+            System.out.println("LetterBox receive: " + letter);
+            return letter;
+        }
+        catch(InterruptedException e) {
+            e.printStackTrace();
+            return "failed";
+        }
+    }
+```  
+
+Ici, la fonction `send()` bloque le thread du producteur si la boîte aux lettres contient déjà une lettre ; il y a une mise en attente dans la file. Le thread sera débloqué uniquement si la fonction `receive()` atteint le `notify()`.  
+Tandis que la fonction `receive()` bloque le thread du consommateur si la boîte aux lettres est vide ; il ne peut pas récupérer de lettre lorsqu'il n'y en a pas.  
+Le thread sera débloqué uniquement si la fonction `send()` atteint le `notify()`.  
+
+Par la suite, on implémentera la possibilité de mettre fin aux threads avec la lettre "Q", et on ajoutera une interface graphique simple, ce qui nous permettra, en plus, d'écouter le clavier de l'utilisateur pour envoyer des lettres dans la file grâce à l'interface `KeyListener`.  
+
+Voici le schéma UML final de la première partie de ce TP :  
+
+![uml](res/tp3ulmschema.png)  
+
+Cette première partie du TP3 nous apprend à implémenter un système de file d'attente (ou **Blocking Queue**), mais la deuxième partie nous apprendra à implémenter un fonctionnement plus avancé de ce système en utilisant, cette fois, des classes propres à Java.  
+
+Dans la 2ᵉ partie du TP, la majorité de l'exercice tourne autour de la classe `ArrayBlockingQueue`.  
+On retrouve le même fonctionnement que notre boîte aux lettres, mais cette fois-ci, il n'est pas question d'un seul élément (une lettre), mais bien d'une vraie file d'attente avec plusieurs éléments.  
+
+Ici, les `consommateurs` seront remplacés par la classe `Mangeur`, les `producteurs` par la classe `Boulanger`, la boîte aux lettres par la classe `Boulangerie`, et les lettres par une simple classe `Pain`.  
+
+Voici un extrait de la classe `Boulangerie`, qui est le cœur de la coordination des threads :  
+
+```java
+private BlockingQueue<Pain> queue =  new ArrayBlockingQueue<Pain>(20); // Voici la classe principalement visée par ce paradigme.
+
+public boolean depose(Pain pain) throws InterruptedException {
+    return queue.offer(pain, 200, TimeUnit.MILLISECONDS);
+}
+
+public Pain achete() throws InterruptedException {
+    return queue.poll(200, TimeUnit.MILLISECONDS);
+}
+
+public int getStock() {
+    return queue.size();
+}
+```  
+
+Cette classe est une version modifiée de la classe bien connue `ArrayList`, qui permet de rajouter, supprimer ou modifier des éléments dans un tableau.  
+
+Les particularités de cette classe sont les suivantes :  
+
+- Cette classe utilise une structure de données en file, dite FIFO (First In, First Out).  
+- Les fonctions d'ajout et de récupération (`offer()` & `poll()`) sont dites "bloquantes". Cela signifie que lorsque le nombre d'éléments dans la file dépasse le nombre maximal paramétré lors de l'instanciation de la classe, la fonction bloque le thread qui l'exécute jusqu'à ce qu'un autre thread libère de la place. Et inversement, lorsque la file est vide et qu'on essaye de récupérer un élément, la fonction bloque le thread jusqu'à ce que la file soit de nouveau remplie.  
+
+C'est le principe de la classe `ArrayBlockingQueue`.  
+
+Voici le schéma final de la seconde partie de ce TP3 :  
+
+![uml](res/tp3blockingqueuesulmschema.png)  
