@@ -1,8 +1,11 @@
 # Rapport TP/TD Programmation parallèle / avancée
 
-## TP 1 : Simulation du mouvement d'un ou plusieurs mobiles
+## Introduction
 
-### Introduction
+
+Le multi-threading est une technique informatique permettant à un programme d’exécuter plusieurs tâches simultanément en divisant son exécution en threads, ou fils d'exécution. Ces threads partagent les ressources du processus principal et peuvent s’exécuter en parallèle ou en quasi-simultané, selon les capacités du processeur. Cette approche optimise les performances, améliore la réactivité des applications, et permet une meilleure utilisation des ressources système. Cependant, elle introduit une complexité accrue, nécessitant une gestion rigoureuse pour éviter les problèmes de concurrence ou de synchronisation.
+
+## TP 1 : Simulation du mouvement d'un ou plusieurs mobiles
 
 En Java, un thread est une unité d'exécution permettant d'effectuer plusieurs tâches simultanément dans un programme. L'interface `Runnable` offre une manière d'implémenter des threads sans hériter de la classe `Thread`. En implémentant `Runnable`, on définit la méthode `run()` qui contient le code que le thread doit exécuter. Ensuite, un objet `Thread` utilise cette instance de `Runnable` pour lancer l'exécution concurrente avec la méthode `start()`. L'utilisation de `Runnable` est souvent privilégiée, car elle permet de séparer la logique métier de l'implémentation du thread, offrant ainsi plus de flexibilité.
 
@@ -301,3 +304,11 @@ C'est le principe de la classe `ArrayBlockingQueue`.
 Voici le schéma final de la seconde partie de ce TP3 :  
 
 ![uml](res/tp3blockingqueuesulmschema.png)  
+
+## Conclusion
+
+Au travers de ces trois TP, nous avons exploré différents concepts fondamentaux de la programmation parallèle, notamment le multi-threading, la synchronisation, et la gestion des ressources partagées.
+
+Dans le premier TP, nous avons introduit la notion de threads et appris à les gérer pour créer des applications interactives et réactives.
+Le deuxième TP nous a familiarisés avec les mécanismes de synchronisation, comme les sémaphores, pour garantir l'exclusion mutuelle et éviter les conflits entre threads.
+Enfin, le troisième TP nous a permis de mettre en œuvre des systèmes de communication entre threads via des files bloquantes, tout en découvrant des abstractions avancées de Java comme ArrayBlockingQueue.
