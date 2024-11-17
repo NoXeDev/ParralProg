@@ -9,7 +9,7 @@ JVM=java
 
 CLASSES=Main.java
 
-MAIN=Main Receiver Sender LetterBox
+MAIN=Main
 
 default:classes
 
