@@ -312,3 +312,168 @@ Au travers de ces trois TP, nous avons exploré différents concepts fondamentau
 Dans le premier TP, nous avons introduit la notion de threads et appris à les gérer pour créer des applications interactives et réactives.
 Le deuxième TP nous a familiarisés avec les mécanismes de synchronisation, comme les sémaphores, pour garantir l'exclusion mutuelle et éviter les conflits entre threads.
 Enfin, le troisième TP nous a permis de mettre en œuvre des systèmes de communication entre threads via des files bloquantes, tout en découvrant des abstractions avancées de Java comme ArrayBlockingQueue.
+
+
+----
+# **Notes de cours : Méthode de Monte Carlo pour l'estimation de π**
+
+## **Introduction**
+
+La méthode de Monte Carlo (MC) permet d’estimer π en utilisant des tirages aléatoires. Cette approche est facilement parallélisable et peut être implémentée sur des architectures à mémoire partagée ou distribuée.
+
+### **Principe de la méthode Monte Carlo**
+
+On considère un quart de disque de rayon $r = 1$ inscrit dans un carré de côté 1.
+- Aire du quart de disque : $A_{	ext{quartD}} = \frac{\pi}{4}$
+- Aire du carré : $A_c = 1$
+- Probabilité qu’un point aléatoire $(x_p, y_p)$ appartienne au quart de disque :  
+  $$P = \frac{A_{	ext{quartD}}}{A_c} = \frac{\pi}{4}$$
+
+L’approximation de π se fait via la fréquence des points appartenant au quart de disque :  
+  $$\pi \approx 4 \times \frac{n_{	ext{cible}}}{n_{	ext{tot}}}$$
+
+## **I. Algorithme séquentiel**
+
+```c
+n_cible = 0;
+for (p = 0; n_tot > 0; n_tot--) {
+    x_p = rand();  // Générer un nombre aléatoire entre ]0,1[
+    y_p = rand();
+    if ((x_p * x_p + y_p * y_p) < 1) {
+        n_cible++;
+    }
+}
+pi = 4 * n_cible / n_tot;
+```
+
+## **II. Parallélisation**
+
+### **A. Itération parallèle**
+
+L'algorithme est parallélisé en divisant les tirages entre plusieurs threads.
+
+#### **Tâches identifiées**
+
+1. **Génération des points** $(x_p, y_p)$ (indépendants, parallélisables).
+2. **Vérification de la condition $x_p^2 + y_p^2 < 1$** et incrémentation de `n_cible` (nécessite une synchronisation).
+3. **Calcul final de π** après la collecte des résultats.
+
+#### **Problèmes et solutions**
+- **Conflits d'accès sur `n_cible`** → Utilisation d'une variable atomique ou d'un verrou.
+
+#### **Algorithme parallèle avec boucle `parallel for`**
+
+```c
+function TirerPoint() {
+    x_p = rand();
+    y_p = rand();
+    return ((x_p * x_p + y_p * y_p) < 1);
+}
+
+n_cible = 0;
+parallel for (p = 0; n_tot > 0; n_tot--) {
+    if (TirerPoint()) {
+        n_cible++;
+    }
+}
+pi = 4 * n_cible / n_tot;
+```
+
+### **B. Modèle Master/Worker**
+
+- **Master** : répartit le travail.
+- **Workers** : réalisent une partie des tirages et renvoient leur résultat.
+- **Synchronisation minimale** car chaque Worker utilise un compteur local.
+
+#### **Algorithme Master/Worker**
+
+```c
+function MCWorker(n_charge) {
+    n_cible_partiel = 0;
+    for (p = 0; n_charge > 0; n_charge--) {
+        if (TirerPoint()) {
+            n_cible_partiel++;
+        }
+    }
+    return n_cible_partiel;
+}
+
+n_charge = n_tot / n_workers;
+ncibles = [NULL * n_workers];
+parallel for (worker = 0; worker < n_workers; worker++) {
+    ncibles[worker] = MCWorker(n_charge);
+}
+n_cible = sum(ncibles);
+pi = 4 * n_cible / n_tot;
+```
+
+### **Avantages du modèle Master/Worker**
+
+- **Réduction des conflits** : chaque Worker travaille sur des données locales.
+- **Meilleure scalabilité** : charge répartie entre plusieurs threads/machines.
+- **Adaptabilité aux environnements distribués** : chaque Worker peut s’exécuter sur une machine distincte.
+
+# **III. Mise en œuvre sur Machine**
+
+
+## **A. Analyse de Assignment102**
+
+### **1. Structure et API utilisée**
+- **Parallélisation avec ExecutorService** :
+  - Utilise un **pool de threads adaptatif** (`newWorkStealingPool`) pour exploiter les cœurs disponibles.
+  - Chaque tirage est exécuté dans une tâche indépendante via `Runnable`.
+- **Synchronisation avec AtomicInteger** :
+  - `nAtomSuccess` compte les points dans le quart de disque avec un **compteur atomique** (`AtomicInteger`) pour éviter les conflits d’accès.
+
+### **2. Modèle de programmation et paradigme**
+- **Modèle** : Itération parallèle. Chaque tirage est une tâche indépendante.
+- **Paradigme** : Approche basée sur l’**itération parallèle** (cf. Partie II.A).
+
+### **3. Comparaison avec le pseudo-code**
+- Remplace `n_cible` par `AtomicInteger` pour éviter les accès critiques.
+- Gestion des threads assurée par `ExecutorService`.
+
+### **4. Limites et optimisations possibles**
+- **Problème d’accès atomique** : `incrementAndGet()` peut être un **goulot d’étranglement** (≈75% du temps d'exécution consacré à la synchronisation).
+- **Optimisations possibles** :
+  1. **Regroupement local** : chaque thread maintient un compteur local avant agrégation.
+  2. **Filtrage inverse** : comptabiliser les points hors cible plutôt que ceux dans la cible.
+
+**Conclusion** : Implémentation correcte mais limitée par des problèmes de synchronisation.
+
+---
+
+## **B. Analyse de Pi.java**
+
+### **1. Utilisation des `Futures` et `Callables`**
+- Un `Future` est un conteneur pour un résultat asynchrone :
+  - Permet de **soumettre une tâche** et récupérer son résultat plus tard.
+  - `get()` bloque jusqu'à la fin du calcul, introduisant une **barrière de synchronisation**.
+- Utilisation d’un **pool de threads fixe** (`FixedThreadPool`).
+
+### **2. Modèle de programmation et paradigme**
+- **Modèle** : Master/Worker.
+- **Paradigme** : Gestion explicite des tâches via `Callables`.
+
+### **3. Structure et API utilisée**
+1. **Parallélisation avec `Callables`** :
+   - Chaque `Worker` est un `Callable<Long>` traitant une fraction du calcul.
+   - Exécution dans un **pool de threads**.
+2. **Synchronisation via `Futures`** :
+   - `Future.get()` récupère les résultats des tâches.
+   - Synchronisation différée à l’agrégation des résultats.
+
+### **4. Comparaison avec le pseudo-code**
+- **Master** : distribue les tâches et agrège les résultats.
+- **Workers** : exécutent la méthode `MCWorker()` en parallèle.
+- **Division équitable** : chaque `Worker` reçoit une charge de travail équilibrée.
+
+### **5. Comparaison avec Assignment102**
+- **Meilleure isolation des calculs** : chaque thread travaille indépendamment.
+- **Moins de synchronisation coûteuse** : évite `AtomicInteger`, synchronisation seulement à la fin.
+- **Optimisation des performances** : meilleur usage des ressources multicœurs.
+
+**Conclusion** : `Pi.java` est plus efficace qu’`Assignment102`, notamment avec un grand nombre de points et de threads.
+
+---
+
