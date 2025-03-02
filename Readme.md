@@ -5,6 +5,13 @@
 
 Le multi-threading est une technique informatique permettant à un programme d’exécuter plusieurs tâches simultanément en divisant son exécution en threads, ou fils d'exécution. Ces threads partagent les ressources du processus principal et peuvent s’exécuter en parallèle ou en quasi-simultané, selon les capacités du processeur. Cette approche optimise les performances, améliore la réactivité des applications, et permet une meilleure utilisation des ressources système. Cependant, elle introduit une complexité accrue, nécessitant une gestion rigoureuse pour éviter les problèmes de concurrence ou de synchronisation.
 
+## Sommaire
+<a href="#partie-1--introduction-au-calcule-parrallèle">Partie 1 : Introduction au calcule parrallèle.</a>
+<br>
+<a href="#partie-2--méthode-de-monte-carlo">Partie 2 : Méthode de Monte-Carlo</a>
+
+# Partie 1 : Introduction au calcule parrallèle.
+
 ## TP 1 : Simulation du mouvement d'un ou plusieurs mobiles
 
 En Java, un thread est une unité d'exécution permettant d'effectuer plusieurs tâches simultanément dans un programme. L'interface `Runnable` offre une manière d'implémenter des threads sans hériter de la classe `Thread`. En implémentant `Runnable`, on définit la méthode `run()` qui contient le code que le thread doit exécuter. Ensuite, un objet `Thread` utilise cette instance de `Runnable` pour lancer l'exécution concurrente avec la méthode `start()`. L'utilisation de `Runnable` est souvent privilégiée, car elle permet de séparer la logique métier de l'implémentation du thread, offrant ainsi plus de flexibilité.
