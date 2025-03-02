@@ -315,7 +315,9 @@ Enfin, le troisième TP nous a permis de mettre en œuvre des systèmes de commu
 
 
 ----
-# **Notes de cours : Méthode de Monte Carlo pour l'estimation de π**
+# **Partie 2 : Méthode de Monte-Carlo**
+
+<i>Cette partie 2 a été rédigée en partie grâce à l'aide de l'intelligence artificielle ChatGPT</i>
 
 ## **Introduction**
 
@@ -346,6 +348,11 @@ for (p = 0; n_tot > 0; n_tot--) {
 pi = 4 * n_cible / n_tot;
 ```
 
+### Décomposition des étapes : 
+- étape 1 : Tirer des points aléatoires x/y entre 0 et 1
+- étape 2 : Compter les points qui sont dans le quart de disque
+- étape 3 : Calculer la valeur de pi a partir de se compteur
+
 ## **II. Parallélisation**
 
 ### **A. Itération parallèle**
@@ -359,7 +366,7 @@ L'algorithme est parallélisé en divisant les tirages entre plusieurs threads.
 3. **Calcul final de π** après la collecte des résultats.
 
 #### **Problèmes et solutions**
-- **Conflits d'accès sur `n_cible`** → Utilisation d'une variable atomique ou d'un verrou.
+- **Conflits d'accès sur `n_cible`** → Utilisation d'une variable atomique ou d'un verrou. (mutex / semaphore)
 
 #### **Algorithme parallèle avec boucle `parallel for`**
 
@@ -413,67 +420,619 @@ pi = 4 * n_cible / n_tot;
 - **Meilleure scalabilité** : charge répartie entre plusieurs threads/machines.
 - **Adaptabilité aux environnements distribués** : chaque Worker peut s’exécuter sur une machine distincte.
 
-# **III. Mise en œuvre sur Machine**
+## **III. Mise en œuvre sur Machine**
+
+### **A. Définitions et contexte**
+
+### **1. `Callable<T>` : Une tâche qui retourne un résultat**
+#### **Définition :**
+Un **`Callable<T>`** est une interface qui représente une **tâche parallèle capable de renvoyer une valeur**. Contrairement à **`Runnable`**, qui ne retourne rien (`void`), un **`Callable<T>`** retourne un objet de type `T` et peut lever des exceptions (`Exception`).  
+
+#### **Syntaxe :**
+```java
+import java.util.concurrent.Callable;
+
+class MaTache implements Callable<Integer> {
+    @Override
+    public Integer call() throws Exception {
+        int resultat = 42;  // Simulation d’un calcul
+        return resultat; 
+    }
+}
+```
+
+#### **Comparaison avec `Runnable`**
+| Caractéristique | `Callable<T>` | `Runnable` |
+|----------------|--------------|------------|
+| **Retourne un résultat** | ✅ Oui (`T`) | ❌ Non (`void`) |
+| **Peut lever une exception** | ✅ Oui (`Exception`) | ❌ Non (uniquement `RuntimeException`) |
+| **Utilisé avec** | `ExecutorService.submit()` | `ExecutorService.execute()` |
+
+---
+
+### **2. `Future<T>` : Un conteneur pour un résultat asynchrone**
+#### **Définition :**
+Un **`Future<T>`** représente un **résultat futur** d’un **`Callable<T>`**. Il permet :
+- De **vérifier si la tâche est terminée** (`isDone()`).
+- De **récupérer le résultat** (`get()`), en **bloquant si nécessaire**.
+- D’**annuler** la tâche (`cancel()`).
+
+#### **Exemple d'utilisation d'un `Future`**
+```java
+import java.util.concurrent.*;
+
+public class ExempleFuture {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        // Soumission d'une tâche avec Callable
+        Future<Integer> futureResult = executor.submit(() -> {
+            Thread.sleep(2000); // Simule un calcul long
+            return 42;
+        });
+
+        // Vérifie si la tâche est terminée
+        while (!futureResult.isDone()) {
+            System.out.println("Tâche en cours...");
+            Thread.sleep(500);
+        }
+
+        // Récupère le résultat (bloque si pas terminé)
+        int resultat = futureResult.get();
+        System.out.println("Résultat obtenu : " + resultat);
+
+        executor.shutdown();
+    }
+}
+```
+
+### **Résumé**
+| **Concept** | **Définition** | **Utilité** |
+|------------|---------------|-------------|
+| `Callable<T>` | Interface représentant une **tâche parallèle** qui retourne un **résultat** | Permet d’effectuer un calcul et récupérer un résultat |
+| `Future<T>` | Objet contenant le **résultat futur** d’un `Callable<T>` | Permet de récupérer un résultat **une fois la tâche terminée** |
+
+---
+
+### **3. Variables Atomiques (`AtomicInteger`, `AtomicLong`) : Gestion Sécurisée des Données Partagées**  
+
+### **Problème des Variables Partagées en Multi-Threading**
+Lorsque plusieurs threads accèdent et modifient **simultanément** une même variable, des **problèmes de concurrence** peuvent survenir, comme des résultats incohérents.  
+
+#### **Exemple sans variable atomique (problème de synchronisation)**  
+```java
+class Compteur {
+    private int valeur = 0;
+
+    public void incrementer() {
+        valeur++;  // Problème : l'incrémentation n'est PAS atomique !
+    }
+
+    public int getValeur() {
+        return valeur;
+    }
+}
+
+public class TestCompteur {
+    public static void main(String[] args) throws InterruptedException {
+        Compteur compteur = new Compteur();
+
+        // Deux threads qui incrémentent en même temps
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) compteur.incrementer();
+        });
+
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) compteur.incrementer();
+        });
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+
+        System.out.println("Valeur attendue : 2000");
+        System.out.println("Valeur réelle : " + compteur.getValeur()); // Erreur possible !
+    }
+}
+```
+**Résultat possible (erreur due à la concurrence) :**  
+```
+Valeur attendue : 2000  
+Valeur réelle : 1985  (ou autre valeur incorrecte)
+```
+Le problème vient du fait que l’opération `valeur++` n'est **pas atomique**, c’est-à-dire qu’elle se décompose en plusieurs instructions machine :
+1. Lire la valeur actuelle de `valeur`
+2. Ajouter 1
+3. Écrire la nouvelle valeur  
+
+Si deux threads exécutent cette opération **en même temps**, l’un peut écraser le résultat de l’autre.
+
+---
+
+### **Solution : `AtomicInteger` pour une Incrémentation Sécurisée**
+La classe **`AtomicInteger`** fournit des **opérations atomiques** comme `incrementAndGet()`, qui garantissent que l'incrémentation est **indivisible et sans interférence**.
+
+#### **Exemple avec `AtomicInteger` (résolution du problème)**
+```java
+import java.util.concurrent.atomic.AtomicInteger;
+
+class CompteurAtomique {
+    private AtomicInteger valeur = new AtomicInteger(0);
+
+    public void incrementer() {
+        valeur.incrementAndGet(); // Incrémentation atomique
+    }
+
+    public int getValeur() {
+        return valeur.get();
+    }
+}
+
+public class TestCompteurAtomique {
+    public static void main(String[] args) throws InterruptedException {
+        CompteurAtomique compteur = new CompteurAtomique();
+
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) compteur.incrementer();
+        });
+
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) compteur.incrementer();
+        });
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+
+        System.out.println("Valeur attendue : 2000");
+        System.out.println("Valeur réelle : " + compteur.getValeur()); // Toujours correcte
+    }
+}
+```
+**Résultat toujours correct :**
+```
+Valeur attendue : 2000  
+Valeur réelle : 2000
+```
+
+---
+
+### **3. Comparaison entre Synchronisation et Variables Atomiques**
+| Approche | Description | Avantages | Inconvénients |
+|----------|------------|-----------|--------------|
+| **`synchronized` (verrou)** | Protège un bloc de code contre les accès concurrents | Fiable et applicable à toute structure | Peut ralentir l’exécution à cause des verrous |
+| **`AtomicInteger`** | Opérations atomiques sur un entier | Très performant car sans verrou | Limité aux types de données atomiques (`int`, `long`, `boolean`) |
 
 
-## **A. Analyse de Assignment102**
+
+
+## **B. Analyse de `Assignment102.java`**
 
 ### **1. Structure et API utilisée**
-- **Parallélisation avec ExecutorService** :
-  - Utilise un **pool de threads adaptatif** (`newWorkStealingPool`) pour exploiter les cœurs disponibles.
-  - Chaque tirage est exécuté dans une tâche indépendante via `Runnable`.
-- **Synchronisation avec AtomicInteger** :
-  - `nAtomSuccess` compte les points dans le quart de disque avec un **compteur atomique** (`AtomicInteger`) pour éviter les conflits d’accès.
+#### **a) Parallélisation avec `ExecutorService` et `Runnable`**
+Le programme `Assignment102` utilise **`ExecutorService`** pour exécuter des tâches parallèles. Il repose sur un **pool de threads adaptatif** (`newWorkStealingPool`) et exécute chaque tirage Monte Carlo via une tâche **`Runnable`**.  
 
-### **2. Modèle de programmation et paradigme**
-- **Modèle** : Itération parallèle. Chaque tirage est une tâche indépendante.
-- **Paradigme** : Approche basée sur l’**itération parallèle** (cf. Partie II.A).
+#### **Extrait du code : Création des threads avec `Runnable`**
+```java
+class MonteCarlo implements Runnable {
+    @Override
+    public void run() {
+        double x = Math.random();
+        double y = Math.random();
+        if (x * x + y * y <= 1)
+            nAtomSuccess.incrementAndGet(); // Incrémentation atomique si le point est dans le cercle
+    }
+}
+```
+- **Chaque thread génère un point `(x, y)` aléatoire**.
+- **Si le point est dans le quart de disque**, `nAtomSuccess.incrementAndGet()` est appelé pour compter le succès.
+
+---
+
+#### **b) Gestion des tâches avec `ExecutorService`**
+```java
+ExecutorService executor = Executors.newWorkStealingPool(nProcessors);
+for (int i = 1; i <= nThrows; i++) {
+    Runnable worker = new MonteCarlo();
+    executor.execute(worker);
+}
+executor.shutdown();
+while (!executor.isTerminated()) {} // Attente de la fin des tâches
+```
+- **Un pool de threads est créé** avec `newWorkStealingPool(nProcessors)`, qui exploite le **nombre optimal de threads**.
+- **Chaque tirage Monte Carlo est soumis comme une tâche `Runnable`**.
+- **Le programme attend la fin de l’exécution** avec `executor.shutdown()` et `while (!executor.isTerminated()) {}`.
+
+---
+
+#### **c) Calcul et stockage du résultat**
+```java
+value = 4.0 * nAtomSuccess.get() / nThrows; // Approximation de Pi
+System.out.println("Approx value:" + value);
+System.out.println("Difference to exact value of pi: " + (value - Math.PI));
+```
+- `nAtomSuccess.get()` retourne **le nombre total de points dans le quart de disque**.
+- **L'approximation de π est obtenue par la formule** :  
+  \[
+  \pi \approx 4 \times \frac{\text{nombre de succès}}{\text{nombre total de lancers}}
+  \]
+  
+---
+
+### **2. Problèmes et limites**
+#### **🚩 Problème de synchronisation avec `AtomicInteger`**
+L’utilisation de `AtomicInteger` pour **chaque tirage individuel** introduit un **goulot d’étranglement**. En effet, `incrementAndGet()` force **une synchronisation entre threads**, ce qui réduit les performances.
+
+**✅ Solution possible :**  
+- **Utiliser un compteur local dans chaque thread**, puis agréger à la fin, **réduisant ainsi la contention sur `AtomicInteger`**.
+
+---
 
 ### **3. Comparaison avec le pseudo-code**
-- Remplace `n_cible` par `AtomicInteger` pour éviter les accès critiques.
-- Gestion des threads assurée par `ExecutorService`.
-
-### **4. Limites et optimisations possibles**
-- **Problème d’accès atomique** : `incrementAndGet()` peut être un **goulot d’étranglement** (≈75% du temps d'exécution consacré à la synchronisation).
-- **Optimisations possibles** :
-  1. **Regroupement local** : chaque thread maintient un compteur local avant agrégation.
-  2. **Filtrage inverse** : comptabiliser les points hors cible plutôt que ceux dans la cible.
-
-**Conclusion** : Implémentation correcte mais limitée par des problèmes de synchronisation.
+| **Pseudo-code Monte Carlo** | **`Assignment102.java`** |
+|--------------------------|-------------------|
+| Boucle `for` sur `N` itérations | Boucle `for` soumettant `N` tâches `Runnable` |
+| Vérification `(x² + y² ≤ 1)` | `if (x * x + y * y <= 1) nAtomSuccess.incrementAndGet();` |
+| Calcul final de π | `4.0 * nAtomSuccess.get() / nThrows;` |
 
 ---
 
-## **B. Analyse de Pi.java**
+## **C. Analyse de `Pi.java`**
 
-### **1. Utilisation des `Futures` et `Callables`**
-- Un `Future` est un conteneur pour un résultat asynchrone :
-  - Permet de **soumettre une tâche** et récupérer son résultat plus tard.
-  - `get()` bloque jusqu'à la fin du calcul, introduisant une **barrière de synchronisation**.
-- Utilisation d’un **pool de threads fixe** (`FixedThreadPool`).
-
-### **2. Modèle de programmation et paradigme**
-- **Modèle** : Master/Worker.
-- **Paradigme** : Gestion explicite des tâches via `Callables`.
-
-### **3. Structure et API utilisée**
-1. **Parallélisation avec `Callables`** :
-   - Chaque `Worker` est un `Callable<Long>` traitant une fraction du calcul.
-   - Exécution dans un **pool de threads**.
-2. **Synchronisation via `Futures`** :
-   - `Future.get()` récupère les résultats des tâches.
-   - Synchronisation différée à l’agrégation des résultats.
-
-### **4. Comparaison avec le pseudo-code**
-- **Master** : distribue les tâches et agrège les résultats.
-- **Workers** : exécutent la méthode `MCWorker()` en parallèle.
-- **Division équitable** : chaque `Worker` reçoit une charge de travail équilibrée.
-
-### **5. Comparaison avec Assignment102**
-- **Meilleure isolation des calculs** : chaque thread travaille indépendamment.
-- **Moins de synchronisation coûteuse** : évite `AtomicInteger`, synchronisation seulement à la fin.
-- **Optimisation des performances** : meilleur usage des ressources multicœurs.
-
-**Conclusion** : `Pi.java` est plus efficace qu’`Assignment102`, notamment avec un grand nombre de points et de threads.
+### **1. Structure et API utilisée**
+Contrairement à `Assignment102`, le programme `Pi.java` utilise **une approche Master/Worker avec `Callable<T>` et `Future<T>`**, qui améliore la gestion du parallélisme.
 
 ---
 
+**a) Création des tâches avec `Callable<Long>`** <br>
+Au lieu de **soumettre une tâche par tirage individuel**, `Pi.java` regroupe **plusieurs tirages dans une seule tâche** (meilleur équilibre entre parallélisme et performance).
+
+#### **Extrait : Classe `Worker` qui exécute les calculs**
+```java
+class Worker implements Callable<Long> {   
+    private int numIterations;
+    public Worker(int num) { this.numIterations = num; }
+
+    @Override
+    public Long call() {
+        long circleCount = 0;
+        Random prng = new Random();
+        for (int j = 0; j < numIterations; j++) {
+            double x = prng.nextDouble();
+            double y = prng.nextDouble();
+            if ((x * x + y * y) < 1)  ++circleCount;
+        }
+        return circleCount; // Retourne le nombre de succès
+    }
+}
+```
+- **Chaque `Worker` gère `numIterations`** (au lieu d’un seul tirage comme dans `Assignment102`).
+- **Utilisation de `Callable<Long>` au lieu de `Runnable`** :  
+  - `Runnable` ne retourne **pas de valeur**  
+  - `Callable<Long>` retourne **le nombre de succès (points dans le cercle)**.
+
+---
+
+**b) Gestion des threads avec `Future<Long>`** <br>
+La classe `Master` gère les **threads et l’agrégation des résultats**.
+
+#### **Extrait : Lancement et récupération des résultats**
+```java
+ExecutorService exec = Executors.newFixedThreadPool(numWorkers);
+List<Future<Long>> results = exec.invokeAll(tasks); // Exécution parallèle
+
+long total = 0;
+for (Future<Long> f : results) {
+    total += f.get(); // Récupère chaque résultat
+}
+
+double pi = 4.0 * total / totalCount / numWorkers;
+```
+- **Création d'un pool fixe de `numWorkers` threads** (`FixedThreadPool`).
+- **Les tâches sont soumises en parallèle et `invokeAll()` attend qu'elles terminent**.
+- **Agrégation finale : récupération des résultats avec `Future<Long>.get()`**.
+
+---
+
+**c) Calcul final et affichage des résultats** <br>
+```java
+System.out.println("\nPi : " + pi );
+System.out.println("Error: " + (Math.abs((pi - Math.PI)) / Math.PI) +"\n");
+```
+L'erreur est calculée et affichée, comme dans `Assignment102`.
+
+---
+
+### **2. Problèmes et limites**
+#### **✅ Meilleure gestion des threads**
+- `Pi.java` **évite le problème de contention de `AtomicInteger`** en utilisant des **compteurs locaux** dans chaque `Worker`, puis **une agrégation finale avec `Future<Long>`**.
+- Moins de **synchronisation coûteuse**, car `Future.get()` bloque **uniquement lors de l'agrégation**, et non à chaque tirage.
+
+---
+
+## **D. Comparaison entre `Assignment102.java` et `Pi.java`**
+| Critère | `Assignment102.java` | `Pi.java` |
+|---------|-----------------|----------|
+| **Modèle** | Parallélisation simple avec `Runnable` | Modèle Master/Worker avec `Callable<T>` |
+| **Type de pool** | `newWorkStealingPool(nProcessors)` | `FixedThreadPool(numWorkers)` |
+| **Gestion des résultats** | `AtomicInteger.incrementAndGet()` pour chaque tirage | Agrégation finale via `Future<Long>.get()` |
+| **Problème majeur** | Contention sur `AtomicInteger` | Synchronisation uniquement à la fin |
+| **Performance** | Plus de synchronisation, moins efficace | Plus efficace avec `Callable<T>` |
+
+---
+
+### **Conclusion**
+- **`Assignment102.java` est plus simple mais inefficace**, à cause du goulot d’étranglement sur `AtomicInteger`.
+- **`Pi.java` optimise la parallélisation avec des `Callable<T>` et `Future<T>`**, réduisant les synchronisations inutiles.
+- **Meilleure approche : `Pi.java`**, surtout sur des machines multicœurs.
+
+
+## **E. Schéma UML de pi.java et assignment102.java**
+![uml](res/Diagramme_UML_TP4.jpg)  
+
+## **F. Approche Master/Worker**
+
+### **1. Introduction**
+
+L'approche Master/Worker repose sur la délégation des tâches à plusieurs travailleurs (Workers) par un maître (Master). Le Master se charge de distribuer le travail, de collecter les résultats et de les agréger pour obtenir le résultat final. Cette découpe se fait a travers plusieurs codes/executions différentes, ce qui fait que la mise en place d'une communication réseaux est facilement implémentable.
+
+### **2. Architecture**
+
+* **Master :**
+    * Lance une connexion vers chaques Workers via des `sockets`
+    * Envoi par messages, les paramètres d'éxecutions : (points a générer `totalCount`, processus a utiliser `numProcess`)
+    * Reçois pour chaques `sockets` le nombre de points tombant dans le quart de disque de chaque Worker
+    * Calcule Pi à partir des résultats obtenu par chaques Workers
+
+* **Workers :**
+    * Créer un `socket` qui attend une connexion master et écoute ses messages 
+    * Reçois des paramètres d'éxecutions : ici le nombre de points à tirer
+    * Fait ses tirages aléatoires en fonction du nombres de points à tirer
+    * Envoi le résultat `circleCount` au Master via le `socket`
+
+![mws](res/master_worker_schema.png)  
+
+### **3. Les sockets**
+
+Java fournit deux principaux types de sockets :
+
+1. **Sockets TCP (Transmission Control Protocol)**
+   - Basés sur une connexion fiable.
+   - Garantissent l'ordre des messages et l'intégrité des données.
+   - Exemples : HTTP, FTP, SMTP.
+
+2. **Sockets UDP (User Datagram Protocol)**
+   - Connexion non fiable, sans garantie d’ordre ni d'intégrité.
+   - Plus rapide et léger que TCP.
+   - Exemples : VoIP, Streaming vidéo.
+
+---
+
+**Dans cet excercice nous allons nous concentrer d'avantage sur les sockets TCP car nous voulons une connexion fiable mais pas forcément rapide**
+
+
+#### **🔹 Serveur TCP (Java)**
+Le serveur utilise `ServerSocket` pour écouter les connexions entrantes.
+
+```java
+import java.io.*;
+import java.net.*;
+
+public class Serveur {
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(1234)) {
+            System.out.println("Serveur en attente de connexion...");
+
+            Socket socket = serverSocket.accept();
+            System.out.println("Client connecté");
+
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+
+            String message = input.readLine();
+            System.out.println("Message reçu : " + message);
+            output.println("Message bien reçu");
+
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+#### **🔹 Client TCP (Java)**
+Le client utilise `Socket` pour se connecter au serveur.
+
+```java
+import java.io.*;
+import java.net.*;
+
+public class Client {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 1234)) {
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+
+            output.println("Hello, Serveur !");
+            String response = input.readLine();
+            System.out.println("Réponse du serveur : " + response);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+---
+
+### **4. Analyse code Master**
+
+Le code `MasterSocket.java` utilise donc le système de socket pour organiser la parrallélisation du calcule. 
+
+1. Initialisation des varaibles
+```java
+long totalCount = 1000000000; // total number of throws on a Worker
+int total = 0; // total number of throws inside quarter of disk
+double pi; 
+```
+
+2. Lecture des entrées au clavier, pour spécifier le nombre de worker et leurs ports / ip respectives
+```java
+int numWorkers = maxServer;
+BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in)); // Création d'un object de lecture d'entrées
+String s; 
+
+// Purement esthétique
+System.out.println("#########################################");
+System.out.println("# Computation of PI by MC method        #");
+System.out.println("#########################################");
+
+// Lecture du nombre de worker
+System.out.println("\n How many workers for computing PI (< maxServer): ");
+try{
+    s = bufferRead.readLine();
+    numWorkers = Integer.parseInt(s);
+    System.out.println(numWorkers);
+}
+catch(IOException ioE){
+    ioE.printStackTrace();
+}
+
+// Pour chaque worker, demander le port d'accès.
+for (int i=0; i<numWorkers; i++){
+    System.out.println("Enter worker"+ i +" port : ");
+    try{
+    s = bufferRead.readLine();
+    System.out.println("You select " + s);
+    }
+    catch(IOException ioE){
+    ioE.printStackTrace();
+    }
+}
+```
+
+3. Création des `sockets` et préparation des objets de lecture/écriture des `sockets`
+```java
+// Pour chaques workers 
+for(int i = 0 ; i < numWorkers ; i++) {
+    sockets[i] = new Socket(ip, tab_port[i]); // Création du socket
+    System.out.println("SOCKET = " + sockets[i]);
+    
+    reader[i] = new BufferedReader( new InputStreamReader(sockets[i].getInputStream())); // Bind d'un object de lecture sur le socket
+    writer[i] = new PrintWriter(new BufferedWriter(new OutputStreamWriter(sockets[i].getOutputStream())),true); // Bind d'un object d'écriture sur le socket
+}
+```
+
+4. Envoi des paramètres aux worker via `sockets`
+```java
+String message_to_send;
+message_to_send = String.valueOf(totalCount) + ":" + String.valueOf(numProcess); // Paramètres sous la forme "nombreiteration:nombreprocessus"
+
+String message_repeat = "y"; 
+long stopTime, startTime;
+
+while (message_repeat.equals("y")){
+
+startTime = System.currentTimeMillis();
+// initialize workers
+for(int i = 0 ; i < numWorkers ; i++) {
+    writer[i].println(message_to_send);          // send a message to each worker
+}
+```
+
+5. Attente des résultats des `Worker`
+```java
+// Pour chaque worker, on attend le résultat
+for(int i = 0 ; i < numWorkers ; i++) {
+    tab_total_workers[i] = reader[i].readLine();  
+    System.out.println("Client received: " + tab_total_workers[i]);
+    System.out.println("Client sent: " + tab_total_workers[i]);
+}
+```
+
+6. Calculer le résultat a partir des données `worker`
+```java
+for(int i = 0 ; i < numWorkers ; i++) {
+    total += Long.parseLong(tab_total_workers[i]);
+}
+pi = 4.0 * total / totalCount / numWorkers;
+```
+
+### **5. Analyse code Worker**
+
+Le code `WorkerSocket.java` est un peu plus simple. C'est lui qui reçois les ordres du master, et fait les tirages aléatoires.
+
+1. Attente de la connection socket du Master
+```java
+ServerSocket s = new ServerSocket(port); // création de l'objet socket
+System.out.println("Server started on port " + port);
+Socket soc = s.accept(); // Cette méthode ce bloque jusqu'à ce qu'une connection arrive.
+```
+
+2. Création des objets de lecture et écriture dans le socket
+```java
+BufferedReader bRead = new BufferedReader(new InputStreamReader(soc.getInputStream()));
+PrintWriter pWrite = new PrintWriter(new BufferedWriter(new OutputStreamWriter(soc.getOutputStream())), true);
+```
+
+3. Attente / lecture des paramètres `totalCount` et `numProcess`
+```java
+String str;
+while (isRunning) {
+    str = bRead.readLine();          // Lecture du message du Master avec l'objet de lecture du socket
+    String workerargs[] = str.split(":");
+    
+```
+
+4. Tirage aléatoire et envoi des résultats au Master
+```java
+    if (!(str.equals("END"))){ // Si le message contient un signal d'arrêt (la chaine de charactère END), le programme s'arrête
+
+        // Création de l'objet Master du code pi.java pour tirage aléatoire
+        Master m = new Master();
+
+        // Lancement d'une boucle de tirage aléatoire
+        long circleCount = m.doRun(Integer.parseInt(workerargs[0])/Integer.parseInt(workerargs[1]), Integer.parseInt(workerargs[1]), "test.txt");
+
+        // Envoi des résultat au master avec l'objet d'écriture du socket 
+        pWrite.println(circleCount);         
+    } else {
+        isRunning=false; // Sortie de la boucle principal et arrêt du code
+    }
+}
+```
+
+
+## IV. Qualité et test de performance
+### Objectifs
+Les tests de performances, servent à plusieurs choses :
+- La mesure du temps d'execution en fonction du nombre de processeurs.
+- L'évaluation d'une variable qui se nomme le speedup, pendant les mesures de types scalabilitées forte et faibles.
+- Analyser les résultats et les comparer avec les attentes.
+- Identifier les points faibles de l'algorithme parrallélisé.
+
+### Scalabilitée forte et faible
+La scalabilité évalue comment les performances d’un système évoluent lorsqu’on augmente les ressources (processeurs, mémoire) ou la charge de travail. On distingue deux types de scalabilité :
+
+* Scalabilité forte : Elle mesure l’efficacité du parallélisme en maintenant la taille du problème fixe tout en augmentant le nombre de ressources. L’objectif est de réduire le temps d’exécution. Une scalabilité forte idéale signifie que si l’on double les ressources, le temps d’exécution est divisé par deux.
+* Scalabilité faible : Elle mesure la capacité du système à maintenir des performances constantes lorsque la charge de travail augmente proportionnellement aux ressources ajoutées. L’objectif est que le temps d’exécution reste stable.
+
+#### **Variable speedup**
+Le **Speedup** (accélération) est une mesure clé de la scalabilité forte. Il est défini comme :  
+
+\[
+S_p = \frac{T_1}{T_p}
+\]
+
+où :  
+- \( S_p \) est le speedup avec \( p \) processeurs,  
+- \( T_1 \) est le temps d’exécution en mode séquentiel (avec 1 processeur),  
+- \( T_p \) est le temps d’exécution avec \( p \) processeurs.  
+
+Un **speedup linéaire** signifie que l’accélération est proportionnelle au nombre de processeurs (\( S_p = p \)), ce qui est l’idéal mais rarement atteint à cause des limitations comme la synchronisation et les communications entre processeurs.
+
+![uml](res/SpeedupScalabiliteForte.png)  
