@@ -35,7 +35,7 @@ public class WorkerSocket {
 		System.out.println("TODO : compute Monte Carlo and send total");
             Master m = new Master();
             int iterations = Integer.parseInt(str);
-            long totalCount = m.doRun(iterations, 1, (long)iterations, "test.txt");
+            long totalCount = m.doRun(iterations, 1, "test.txt");
 	        pWrite.println(totalCount);         // send number of points in quarter of disk
 	    }else{
 		isRunning=false;

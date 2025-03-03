@@ -22,8 +22,7 @@ class Pi
 	int totalCount = args[0].equals("") ? 50000 : Integer.parseInt(args[0]);
 	int numWorkers = args[1].equals("") ? 10 : Integer.parseInt(args[1]);
 	String outname = args[2].equals("") ? "../out_pi.txt" : args[2];
-	long iterationsPerWorker = totalCount / numWorkers;
-	total = new Master().doRun(totalCount, numWorkers, iterationsPerWorker, outname);
+	total = new Master().doRun(totalCount, numWorkers, outname);
 	System.out.println("total from Master = " + total);
     }
 }
@@ -33,7 +32,7 @@ class Pi
  * and aggregates the results.
  */
 class Master {
-    public long doRun(int totalCount, int numWorkers, long iterationPerWorker,  String outname) throws InterruptedException, ExecutionException 
+    public long doRun(int totalCount, int numWorkers,  String outname) throws InterruptedException, ExecutionException 
     {
 
 	long startTime = System.currentTimeMillis();
@@ -42,7 +41,7 @@ class Master {
 	List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
 	for (int i = 0; i < numWorkers; ++i) 
 	    {
-		tasks.add(new Worker(iterationPerWorker));
+		tasks.add(new Worker(totalCount/numWorkers));
 	    }
     
 	// Run them and receive a collection of Futures
