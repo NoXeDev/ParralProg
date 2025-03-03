@@ -11,7 +11,7 @@ def generate_data_scal_forte(iterations, proc, classname, filename):
     """Exécute le programme Java plusieurs fois pour assurer des résultats cohérents."""
     for p in range(1, proc+1):  # De 1 à 16 processus
         for _ in range(DATA_REDUDENCY):
-            args = ["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations)), str(p), filename]
+            args = ["java", "-cp", "./TP4_Montecarlo/", classname, str(int(iterations)), str(p), filename]
             print(args)
             subprocess.run(args)
 
@@ -19,7 +19,7 @@ def generate_data_scal_faible(iterations, proc, classname, filename):
     """Exécute le programme Java plusieurs fois pour assurer des résultats cohérents."""
     for p in range(1, proc+1):  # De 1 à 16 processus
         for _ in range(DATA_REDUDENCY):
-            args = ["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations*p)), str(p), filename]
+            args = ["java", "-cp", "./TP4_Montecarlo/", classname, str(int(iterations*p)), str(p), filename]
             print(args)
             subprocess.run(args)
 
