@@ -1043,3 +1043,52 @@ où :
 Un **speedup linéaire** signifie que l’accélération est proportionnelle au nombre de processeurs (\( S_p = p \)), ce qui est l’idéal mais rarement atteint à cause des limitations comme la synchronisation et les communications entre processeurs.
 
 ![uml](res/SpeedupScalabiliteForte.png)  
+
+## V. Mise en place des mesures de qualitées sur machine
+Voici les charactéristiques de la machine avec lequels j'ai fait ces tests : 
+
+#### **Processeur :**  
+- **Modèle :** AMD Ryzen 7 3700X (8 cœurs, 16 threads)  
+- **Architecture :** x86-64 (64 bits)  
+- **Nombre de processeurs physiques :** 8
+- **Nombre total de cœurs logiques :** 16 
+- **Fréquence :** 3.6 GHz de base, boost jusqu'à 4.4 GHz
+- **Hyperviseur activé :** Oui 
+
+#### **Mémoire RAM :**  
+- **Mémoire totale installée :** 32 Go (33554432 Ko)  
+- **Mémoire disponible :** ~16 Go  
+- **Supporte la virtualisation :** Oui
+- **Type d'accès mémoire :** Partagé (architecture UMA – Unified Memory Architecture)  
+- **Paging File :** Présent (Pagefile.sys sur C:)  
+
+#### **Architecture Système et Calcul Parallèle :**  
+- **Architecture du système :** x64 (Windows 11 Pro, multiprocesseur)  
+- **Type de système :** Desktop (pas de cluster distribué)  
+- **Mode de gestion mémoire :** Mémoire partagée (toutes les applications accèdent à la RAM globale)  
+
+
+### **A. Tests sur Pi.java**
+---
+
+![scale](res/piscale_fort_faible.png)
+
+Analyse de la scalabiliée forte : 
+- le speedup augmente avec le nombre de processus, mais plus il avance, plus il s'écarte de la courbe idéal. Ici l'architecture de la machine est a 16 coeurs logique, on peux donc imaginer qu'après 16 processus, la courbe plafonne et n'augmente plus.
+- Cette courbe nous indique que le code dispose d'une bonne performance parallèle, mais que bien évidament, la limitation ici devient materiel.
+
+Analyse de la scalabilitée faible : 
+- La courbe du speedup, nous indique une perte de performance progressive lorsque le nombre de processus augmente.
+- On observe parfois des pics irréguliés, le programme ne tournant pas sur une machine complètement dédier, il se peux que d'autres logiciels en soit la cause.
+
+### **B. Tests sur Assignment102.java**
+---
+
+![uml](res/assscale_fort_faible.png)  
+
+Analyse de la scalabilitée forte :
+- Le speedup n'augmente pas du tout lorsqu'on augment le processus : de toute évidence l'algorithme est très mal conçu pour fonctionner en parrallèle.
+- Cela indique un problème de parrallélisation.
+
+Analyse de la scalabilitée faible : 
+- La courbe indique une très grosse perte de performances lors des premiers processus, et a l'air de se stabilisé arrivé a la limite machine.
