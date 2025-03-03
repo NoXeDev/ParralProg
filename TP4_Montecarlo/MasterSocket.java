@@ -104,6 +104,7 @@ public class MasterSocket {
 	   catch(IOException ioE){
 	       ioE.printStackTrace();
 	   }
+	   total = 0;
        }
        
        for(int i = 0 ; i < numWorkers ; i++) {
