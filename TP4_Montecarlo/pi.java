@@ -19,7 +19,7 @@ class Pi
     {
 	long total=0;
 	// 10 workers, 50000 iterations each
-	int totalCount = args[0].equals("") ? 50000 : Integer.parseInt(args[0]);
+	long totalCount = args[0].equals("") ? 50000 : Long.parseLong(args[0]);
 	int numWorkers = args[1].equals("") ? 10 : Integer.parseInt(args[1]);
 	String outname = args[2].equals("") ? "../out_pi.txt" : args[2];
 	total = new Master().doRun(totalCount, numWorkers, outname);
@@ -32,7 +32,7 @@ class Pi
  * and aggregates the results.
  */
 class Master {
-    public long doRun(int totalCount, int numWorkers,  String outname) throws InterruptedException, ExecutionException 
+    public long doRun(long totalCount, int numWorkers,  String outname) throws InterruptedException, ExecutionException 
     {
 
 	long startTime = System.currentTimeMillis();

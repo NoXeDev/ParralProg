@@ -16,8 +16,8 @@ public class MasterSocket {
     public static void main(String[] args) throws Exception {
 
 	// MC parameters
-	int totalCount = 16000000; // total number of throws on a Worker
-	int total = 0; // total number of throws inside quarter of disk
+	long totalCount = 16000000; // total number of throws on a Worker
+	long total = 0; // total number of throws inside quarter of disk
 	double pi; 
 
 	int numWorkers = maxServer;
@@ -81,7 +81,7 @@ public class MasterSocket {
 	   
 	   // compute PI with the result of each workers
 	   for(int i = 0 ; i < numWorkers ; i++) {
-	       total += Integer.parseInt(tab_total_workers[i]);
+	       total += Long.parseLong(tab_total_workers[i]);
 	   }
 	   pi = 4.0 * total / totalCount / numWorkers;
 
