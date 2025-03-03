@@ -57,7 +57,7 @@ class Master {
 		// until result from corresponding worker is ready.
 		total += f.get();
 	    }
-	double pi = 4.0 * total / iterationPerWorker;
+	double pi = 4.0 * total / totalCount;
 
 	long stopTime = System.currentTimeMillis();
 

@@ -5,7 +5,6 @@ import java.net.*;
  */
 public class MasterSocket {
     static int maxServer = 8;
-	static int numProcess = 16;
     static final int[] tab_port = {25545,25546,25547,25548,25549,25550,25551,25552};
     static String[] tab_total_workers = new String[maxServer];
     static final String ip = "127.0.0.1";
@@ -17,7 +16,7 @@ public class MasterSocket {
     public static void main(String[] args) throws Exception {
 
 	// MC parameters
-	long totalCount = 1000000000; // total number of throws on a Worker
+	int totalCount = 16000000; // total number of throws on a Worker
 	int total = 0; // total number of throws inside quarter of disk
 	double pi; 
 
@@ -60,7 +59,7 @@ public class MasterSocket {
        }
 
        String message_to_send;
-       message_to_send = String.valueOf(totalCount) + ":" + String.valueOf(numProcess);
+       message_to_send = String.valueOf(totalCount);
 
        String message_repeat = "y";
 
@@ -77,13 +76,12 @@ public class MasterSocket {
 	   //listen to workers's message 
 	   for(int i = 0 ; i < numWorkers ; i++) {
 	       tab_total_workers[i] = reader[i].readLine();      // read message from server
-		   System.out.println("Client received: " + tab_total_workers[i]);
 	       System.out.println("Client sent: " + tab_total_workers[i]);
 	   }
 	   
 	   // compute PI with the result of each workers
 	   for(int i = 0 ; i < numWorkers ; i++) {
-	       total += Long.parseLong(tab_total_workers[i]);
+	       total += Integer.parseInt(tab_total_workers[i]);
 	   }
 	   pi = 4.0 * total / totalCount / numWorkers;
 
@@ -106,7 +104,6 @@ public class MasterSocket {
 	   catch(IOException ioE){
 	       ioE.printStackTrace();
 	   }
-	   total = 0; 
        }
        
        for(int i = 0 ; i < numWorkers ; i++) {

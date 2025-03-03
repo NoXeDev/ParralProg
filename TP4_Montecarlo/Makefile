@@ -1,9 +1,9 @@
-
 SOURCES := $(wildcard *.java)
 CLASSES := $(SOURCES:.java=.class)
 
-all: $(CLASSES)
-
+all: pi $(CLASSES)
+pi:
+	javac pi.java
 %.class: %.java
 	javac $<
 

@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.Random;
 /**
  * Worker is a server. It computes PI by Monte Carlo method and sends 
  * the result to Master.
@@ -8,6 +7,7 @@ import java.util.Random;
 public class WorkerSocket {
     static int port = 25545; //default port
     private static boolean isRunning = true;
+    
     /**
      * compute PI locally by MC and sends the number of points 
      * inside the disk to Master. 
@@ -25,23 +25,18 @@ public class WorkerSocket {
 
         // PrintWriter pWrite for writing message to Master
         PrintWriter pWrite = new PrintWriter(new BufferedWriter(new OutputStreamWriter(soc.getOutputStream())), true);
-	    String str;
+	String str;
         while (isRunning) {
 	    str = bRead.readLine();          // read message from Master
-        String workerargs[] = str.split(":");
 	    if (!(str.equals("END"))){
-		System.out.println("Server receives totalCount = " +  workerargs[0]);
-        System.out.println("Server receives process = " +  workerargs[1]);
+		System.out.println("Server receives totalCount = " +  str);
 		
-
-        
-        Master m = new Master();
-        long iterationsPerWorker = Integer.parseInt(workerargs[0]) / Integer.parseInt(workerargs[1]);
-        long circleCount = m.doRun(Integer.parseInt(workerargs[0]), Integer.parseInt(workerargs[1]), iterationsPerWorker, "test.txt");
-        
-        System.out.println(circleCount);
-
-        pWrite.println(circleCount);         // send number of points in quarter of disk
+		// compute
+		System.out.println("TODO : compute Monte Carlo and send total");
+            Master m = new Master();
+            int iterations = Integer.parseInt(str);
+            long totalCount = m.doRun(iterations, 1, (long)iterations, "test.txt");
+	        pWrite.println(totalCount);         // send number of points in quarter of disk
 	    }else{
 		isRunning=false;
 	    }	    
