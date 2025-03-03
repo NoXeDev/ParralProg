@@ -11,15 +11,17 @@ def generate_data_scal_forte(iterations, proc, classname, filename):
     """Exécute le programme Java plusieurs fois pour assurer des résultats cohérents."""
     for p in range(1, proc+1):  # De 1 à 16 processus
         for _ in range(DATA_REDUDENCY):
-            print(["java", classname, str(int(iterations)), str(p), filename])
-            subprocess.run(["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations/p)), str(p), filename], stdout=subprocess.DEVNULL)
+            args = ["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations)), str(p), filename]
+            print(args)
+            subprocess.run(args)
 
 def generate_data_scal_faible(iterations, proc, classname, filename):
     """Exécute le programme Java plusieurs fois pour assurer des résultats cohérents."""
     for p in range(1, proc+1):  # De 1 à 16 processus
         for _ in range(DATA_REDUDENCY):
-            print(["java", classname, str(int(iterations)), str(p), filename])
-            subprocess.run(["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations)), str(p), filename], stdout=subprocess.DEVNULL)
+            args = ["java", "-cp", ".\\TP4_Montecarlo\\", classname, str(int(iterations*p)), str(p), filename]
+            print(args)
+            subprocess.run(args)
 
 def lire_donnees(fichier):
     """Lit un fichier contenant les données d'exécution et calcule le speedup."""
@@ -93,21 +95,39 @@ generate_data_scal_faible(10000000, 16, "Pi", "out_pi_faible10000000.txt")
 generate_data_scal_forte(100000000, 16, "Pi", "out_pi_fort100000000.txt")
 generate_data_scal_faible(100000000, 16, "Pi", "out_pi_faible100000000.txt")
 
-#generate_data_scal_faible(12_000_000, 16, "Assignment102", "../out_ass_fort12_000_000.txt")
-#generate_data_scal_faible(12_000_000, 16, "Assignment102", "../out_ass_faible12_000_000.txt")
+generate_data_scal_forte(1000000, 16, "Assignment102", "out_ass_fort1000000.txt")
+generate_data_scal_faible(1000000, 16, "Assignment102", "out_ass_faible1000000.txt")
+generate_data_scal_forte(10000000, 16, "Assignment102", "out_ass_fort10000000.txt")
+generate_data_scal_faible(10000000, 16, "Assignment102", "out_ass_faible10000000.txt")
 
-data1 = lire_donnees("./out_pi_fort10000000.txt")
-data2 = lire_donnees("./out_pi_fort100000000.txt")
-scale_forte = {
-    10000000: data1,
-    100000000: data2
+
+pifodata1 = lire_donnees("./out_pi_fort10000000.txt")
+pifodata2 = lire_donnees("./out_pi_fort100000000.txt")
+pi_scale_forte = {
+    10000000: pifodata1,
+    100000000: pifodata2
 }
 
-data1 = lire_donnees("./out_pi_faible10000000.txt")
-data2 = lire_donnees("./out_pi_faible100000000.txt")
-scale_faible = {
-    10000000: data1,
-    100000000: data2
+pifadata1 = lire_donnees("./out_pi_faible10000000.txt")
+pifadata2 = lire_donnees("./out_pi_faible100000000.txt")
+pi_scale_faible = {
+    10000000: pifadata1,
+    100000000: pifadata2
 }
 
-tracer_scalabilite(scale_forte, scale_faible)
+assfodata1 = lire_donnees("./out_ass_fort1000000.txt")
+assfodata2 = lire_donnees("./out_ass_fort10000000.txt")
+ass_scale_forte = {
+    1000000: assfodata1,
+    10000000: assfodata2
+}
+
+assfadata1 = lire_donnees("./out_ass_faible1000000.txt")
+assfadata2 = lire_donnees("./out_ass_faible10000000.txt")
+ass_scale_faible = {
+    1000000: assfadata1,
+    10000000: assfadata2
+}
+
+tracer_scalabilite(pi_scale_forte, pi_scale_faible)
+tracer_scalabilite(ass_scale_forte, ass_scale_faible)

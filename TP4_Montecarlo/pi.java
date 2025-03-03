@@ -22,7 +22,8 @@ class Pi
 	int totalCount = args[0].equals("") ? 50000 : Integer.parseInt(args[0]);
 	int numWorkers = args[1].equals("") ? 10 : Integer.parseInt(args[1]);
 	String outname = args[2].equals("") ? "../out_pi.txt" : args[2];
-	total = new Master().doRun(totalCount, numWorkers, outname);
+	long iterationsPerWorker = totalCount / numWorkers;
+	total = new Master().doRun(totalCount, numWorkers, iterationsPerWorker, outname);
 	System.out.println("total from Master = " + total);
     }
 }
@@ -32,7 +33,7 @@ class Pi
  * and aggregates the results.
  */
 class Master {
-    public long doRun(int totalCount, int numWorkers, String outname) throws InterruptedException, ExecutionException 
+    public long doRun(int totalCount, int numWorkers, long iterationPerWorker,  String outname) throws InterruptedException, ExecutionException 
     {
 
 	long startTime = System.currentTimeMillis();
@@ -41,7 +42,7 @@ class Master {
 	List<Callable<Long>> tasks = new ArrayList<Callable<Long>>();
 	for (int i = 0; i < numWorkers; ++i) 
 	    {
-		tasks.add(new Worker(totalCount));
+		tasks.add(new Worker(iterationPerWorker));
 	    }
     
 	// Run them and receive a collection of Futures
@@ -56,20 +57,20 @@ class Master {
 		// until result from corresponding worker is ready.
 		total += f.get();
 	    }
-	double pi = 4.0 * total / totalCount / numWorkers;
+	double pi = 4.0 * total / iterationPerWorker;
 
 	long stopTime = System.currentTimeMillis();
 
 	System.out.println("\nPi : " + pi );
 	System.out.println("Error: " + (Math.abs((pi - Math.PI)) / Math.PI) +"\n");
 
-	System.out.println("Ntot: " + totalCount*numWorkers);
+	System.out.println("Ntot: " + totalCount);
 	System.out.println("Available processors: " + numWorkers);
 	System.out.println("Time Duration (ms): " + (stopTime - startTime) + "\n");
 
 	System.out.println( (Math.abs((pi - Math.PI)) / Math.PI) +" "+ totalCount*numWorkers +" "+ numWorkers +" "+ (stopTime - startTime));
 
-	String data = "\n"+totalCount * numWorkers +", " + Math.abs(pi - Math.PI) / Math.PI +", " + numWorkers +", " + (stopTime - startTime);
+	String data = "\n"+totalCount +", " + Math.abs(pi - Math.PI) / Math.PI +", " + numWorkers +", " + (stopTime - startTime);
 
     FileWriter writer = null;
     try {
@@ -91,8 +92,8 @@ class Master {
  */
 class Worker implements Callable<Long> 
 {   
-    private int numIterations;
-    public Worker(int num) 
+    private final long numIterations;
+    public Worker(long num) 
 	{ 
 	    this.numIterations = num; 
 	}

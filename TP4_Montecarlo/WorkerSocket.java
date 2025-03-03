@@ -36,7 +36,8 @@ public class WorkerSocket {
 
         
         Master m = new Master();
-        long circleCount = m.doRun(Integer.parseInt(workerargs[0])/Integer.parseInt(workerargs[1]), Integer.parseInt(workerargs[1]), "test.txt");
+        long iterationsPerWorker = Integer.parseInt(workerargs[0]) / Integer.parseInt(workerargs[1]);
+        long circleCount = m.doRun(Integer.parseInt(workerargs[0]), Integer.parseInt(workerargs[1]), iterationsPerWorker, "test.txt");
         
         System.out.println(circleCount);
 
